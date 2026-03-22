@@ -29,7 +29,9 @@ public class LiveController : ControllerBase
 
         while (!ct.IsCancellationRequested)
         {
+            // AsNoTracking: stream is read-only and long-lived — tracked entities would stay in memory indefinitely
             var newAlerts = await _db.Alerts
+                .AsNoTracking()
                 .Where(a => a.Timestamp > lastCheck)
                 .OrderBy(a => a.Timestamp)
                 .ToListAsync(ct);
