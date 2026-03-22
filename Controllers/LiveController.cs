@@ -20,9 +20,10 @@ public class LiveController : ControllerBase
     [HttpGet("alerts")]
     public async Task StreamAlerts(CancellationToken ct)
     {
-        Response.Headers.Append("Content-Type", "text/event-stream");
-        Response.Headers.Append("Cache-Control", "no-cache");
-        Response.Headers.Append("Connection", "keep-alive");
+        Response.ContentType = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        // Disable reverse proxy buffering so events are delivered immediately
+        Response.Headers["X-Accel-Buffering"] = "no";
 
         var lastCheck = DateTime.UtcNow;
 
