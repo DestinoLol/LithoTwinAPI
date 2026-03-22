@@ -165,6 +165,9 @@ public class MachineLifecycleService
 
     private static double ComputeTemperatureScore(Machine m)
     {
+        // Guard against division by zero if MaxOperatingTemp is not configured (prevents NaN crashing JSON serialization)
+        if (m.MaxOperatingTemp <= 0) return 0;
+
         double ratio = m.CurrentTemperature / m.MaxOperatingTemp;
         if (ratio < 0.7) return 100;
         if (ratio > 1.0) return 0;
