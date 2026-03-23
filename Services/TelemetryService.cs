@@ -52,6 +52,13 @@ public class TelemetryService
 
         double recordedTemp = ApplySensorFaultNoise(temperature, activeFaultTypes);
 
+        // ThermalOverload causes additional temperature spike
+        if (activeFaultTypes.Contains(FaultType.ThermalOverload) &&
+            machine.State is MachineLifecycleState.Running or MachineLifecycleState.Calibrating)
+        {
+            recordedTemp += SystemConstants.ThermalOverloadDriftSpikeC;
+        }
+
         machine.CurrentTemperature = recordedTemp;
         machine.LastUpdated = DateTime.UtcNow;
 
@@ -60,13 +67,6 @@ public class TelemetryService
             MachineId = machineId,
             Temperature = recordedTemp
         });
-
-        // ThermalOverload causes additional temperature spike
-        if (activeFaultTypes.Contains(FaultType.ThermalOverload) &&
-            machine.State is MachineLifecycleState.Running or MachineLifecycleState.Calibrating)
-        {
-            machine.CurrentTemperature += SystemConstants.ThermalOverloadDriftSpikeC;
-        }
 
         // Overheat detection → fault injection via FaultService
         if (recordedTemp >= machine.MaxOperatingTemp &&
@@ -127,7 +127,7 @@ public class TelemetryService
         var sb = new StringBuilder();
         sb.AppendLine("timestamp,machine_id,temperature_c");
         foreach (var r in readings)
-            sb.AppendLine($"{r.RecordedAt:yyyy-MM-dd HH:mm:ss},{r.MachineId},{r.Temperature:F2}");
+            sb.AppendLine(FormattableString.Invariant($"{r.RecordedAt:yyyy-MM-dd HH:mm:ss},{r.MachineId},{r.Temperature:F2}"));
 
         return sb.ToString();
     }
