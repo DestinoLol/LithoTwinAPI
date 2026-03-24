@@ -16,7 +16,6 @@ public class MachineLifecycleService
     public MachineLifecycleService(AppDbContext db)
     {
         _db = db;
-        _db.Database.EnsureCreated();
     }
 
     /// <summary>
