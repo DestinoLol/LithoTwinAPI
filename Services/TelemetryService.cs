@@ -108,8 +108,9 @@ public class TelemetryService
         if (readings.Count < 4)
             return "insufficient_data";
 
-        var recent = readings.Take(4).Average();
-        var older = readings.Skip(readings.Count - 4).Average();
+        int half = readings.Count / 2;
+        var recent = readings.Take(half).Average();
+        var older = readings.Skip(readings.Count - half).Take(half).Average();
         var diff = recent - older;
 
         if (diff > 0.5) return "rising";
