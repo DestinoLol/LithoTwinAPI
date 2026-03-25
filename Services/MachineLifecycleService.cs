@@ -160,6 +160,84 @@ public class MachineLifecycleService
         };
     }
 
+    /// <summary>
+    /// Compares machines by health score, thermal headroom, active faults, and production eligibility.
+    /// Returns an optimal production recommendation.
+    /// </summary>
+    public async Task<MachineComparison> CompareMachinesAsync(List<string>? machineIds = null)
+    {
+        var query = _db.Machines.AsQueryable();
+        if (machineIds != null && machineIds.Any())
+            query = query.Where(m => machineIds.Contains(m.Id));
+
+        var machines = await query.ToListAsync();
+        if (!machines.Any())
+            throw new InvalidOperationException("No machines found matching the specified criteria.");
+
+        var activeFaults = await _db.MachineFaults
+            .Where(f => f.ResolvedAt == null)
+            .ToListAsync();
+
+        var entries = new List<MachineComparisonEntry>();
+        foreach (var m in machines)
+        {
+            var faultCount = activeFaults.Count(f => f.MachineId == m.Id);
+            double tempScore = ComputeTemperatureScore(m);
+            double uptimeScore = ComputeUptimeScore(m);
+            double stateScore = m.State switch
+            {
+                MachineLifecycleState.Running => 100,
+                MachineLifecycleState.Calibrating => 75,
+                MachineLifecycleState.Idle => 60,
+                MachineLifecycleState.Maintenance => 30,
+                MachineLifecycleState.Faulted => 0,
+                _ => 50
+            };
+            double overall = (tempScore * 0.5) + (uptimeScore * 0.2) + (stateScore * 0.3);
+            overall = Math.Max(0, overall - (faultCount * 15));
+
+            entries.Add(new MachineComparisonEntry
+            {
+                MachineId = m.Id,
+                State = m.State,
+                CurrentTemperature = m.CurrentTemperature,
+                MaxOperatingTemp = m.MaxOperatingTemp,
+                UptimeHours = m.UptimeHours,
+                ExposureCount = m.ExposureCount,
+                ThroughputFactor = m.ThroughputFactor,
+                ActiveFaultCount = faultCount,
+                HealthScore = Math.Round(overall, 1)
+            });
+        }
+
+        var eligible = entries.Where(e => e.IsEligibleForProduction).ToList();
+        string? recommendedId = null;
+        string recommendationReason;
+
+        if (eligible.Any())
+        {
+            // Pick highest health score, break ties with thermal headroom
+            var best = eligible
+                .OrderByDescending(e => e.HealthScore)
+                .ThenByDescending(e => e.ThermalHeadroom)
+                .First();
+            recommendedId = best.MachineId;
+            recommendationReason = $"Machine '{best.MachineId}' has the highest health score ({best.HealthScore:F1}) with {best.ThermalHeadroom:F1}°C thermal headroom.";
+        }
+        else
+        {
+            recommendationReason = "No machines are currently eligible for production (all faulted, in maintenance, or idle).";
+        }
+
+        return new MachineComparison
+        {
+            Machines = entries.OrderByDescending(e => e.HealthScore).ToList(),
+            RecommendedMachineId = recommendedId,
+            RecommendationReason = recommendationReason,
+            ComparedAt = DateTime.UtcNow
+        };
+    }
+
     // ---- scoring helpers ----
 
     private static double ComputeTemperatureScore(Machine m)
