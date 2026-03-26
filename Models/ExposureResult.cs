@@ -13,5 +13,6 @@ public class ExposureResult
     public double OverlayErrorY { get; set; }  // nm
 
     public bool Passed { get; set; }
+    public string? FailureReason { get; set; }
     public DateTime ExposedAt { get; set; } = DateTime.UtcNow;
 }
