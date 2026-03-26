@@ -149,6 +149,10 @@ public class ExposureService
             result.OverlayErrorX * result.OverlayErrorX +
             result.OverlayErrorY * result.OverlayErrorY);
         result.Passed = totalOverlay < SystemConstants.OverlaySpecLimitNm;
+        if (!result.Passed)
+        {
+            result.FailureReason = $"Total overlay error ({totalOverlay:F3}nm) exceeded spec limit ({SystemConstants.OverlaySpecLimitNm:F1}nm)";
+        }
 
         return result;
     }
