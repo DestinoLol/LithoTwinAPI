@@ -32,6 +32,10 @@ public class FactoryController : ControllerBase
     // ---- telemetry ----
 
     [HttpPost("telemetry")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> PostTelemetry(
         [FromQuery] string machineId, [FromQuery] double temperature)
     {
@@ -46,14 +50,17 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("telemetry/{machineId}/history")]
+    [ProducesResponseType(typeof(List<TelemetryReading>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTelemetryHistory(string machineId, [FromQuery] int count = 50)
         => Ok(await _telemetry.GetHistoryAsync(machineId, count));
 
     [HttpGet("telemetry/{machineId}/trend")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTrend(string machineId)
         => Ok(new { machineId, trend = await _telemetry.ComputeTrendAsync(machineId) });
 
     [HttpGet("telemetry/{machineId}/export")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> ExportCsv(string machineId)
     {
         var csv = await _telemetry.ExportCsvAsync(machineId);
@@ -63,6 +70,9 @@ public class FactoryController : ControllerBase
     // ---- state transitions ----
 
     [HttpPost("machines/{machineId}/transition")]
+    [ProducesResponseType(typeof(StateTransition), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> TransitionState(
         string machineId,
         [FromQuery] MachineLifecycleState targetState,
@@ -78,12 +88,15 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("machines/{machineId}/transitions")]
+    [ProducesResponseType(typeof(List<StateTransition>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTransitionHistory(string machineId)
         => Ok(await _lifecycle.GetTransitionHistoryAsync(machineId));
 
     // ---- fault management ----
 
     [HttpPost("machines/{machineId}/fault")]
+    [ProducesResponseType(typeof(MachineFault), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> InjectFault(
         string machineId,
         [FromQuery] FaultType faultType,
@@ -98,6 +111,9 @@ public class FactoryController : ControllerBase
     }
 
     [HttpPost("machines/{machineId}/resolve-faults")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ResolveFaults(string machineId)
     {
         try
@@ -110,16 +126,21 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("machines/{machineId}/faults")]
+    [ProducesResponseType(typeof(List<MachineFault>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetActiveFaults(string machineId)
         => Ok(await _faults.GetActiveFaultsAsync(machineId));
 
     // ---- wafer routing ----
 
     [HttpPost("route-wafer")]
+    [ProducesResponseType(typeof(WaferBatch), StatusCodes.Status200OK)]
     public async Task<IActionResult> RouteWafer()
         => Ok(await _exposure.RouteWaferBatchAsync());
 
     [HttpPost("batches/{id}/complete")]
+    [ProducesResponseType(typeof(WaferBatch), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CompleteBatch(Guid id)
     {
         try { return Ok(await _exposure.CompleteBatchAsync(id)); }
@@ -130,10 +151,13 @@ public class FactoryController : ControllerBase
     // ---- machines ----
 
     [HttpGet("system-status")]
+    [ProducesResponseType(typeof(List<Machine>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStatus()
         => Ok(await _lifecycle.GetAllMachinesAsync());
 
     [HttpGet("machines/{machineId}/health")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHealth(string machineId)
     {
         try { return Ok(await _lifecycle.ComputeHealthScoreAsync(machineId)); }
@@ -141,19 +165,39 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("machines/{machineId}/maintenance-prediction")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PredictMaintenance(string machineId)
     {
         try { return Ok(await _lifecycle.PredictMaintenanceAsync(machineId)); }
         catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
     }
 
+    [HttpGet("machines/compare")]
+    [ProducesResponseType(typeof(MachineComparison), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CompareMachines([FromQuery] List<string>? machineIds = null)
+    {
+        try
+        {
+            var result = await _lifecycle.CompareMachinesAsync(machineIds);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) { return NotFound(new { error = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
     // ---- alerts & stats ----
 
     [HttpGet("alerts")]
+    [ProducesResponseType(typeof(List<Alert>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAlerts()
         => Ok(await _alerts.GetActiveAlertsAsync());
 
     [HttpPost("alerts/{id}/acknowledge")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AcknowledgeAlert(Guid id)
     {
         try
@@ -165,6 +209,7 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("stats")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStats()
         => Ok(await _alerts.GetFactoryStatsAsync());
 }
