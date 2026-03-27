@@ -1,7 +1,6 @@
-using LithoTwinAPI.Data;
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LithoTwinAPI.Controllers;
 
@@ -9,21 +8,28 @@ namespace LithoTwinAPI.Controllers;
 [Route("api/[controller]")]
 public class ReticleController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly ReticleService _reticleService;
 
-    public ReticleController(AppDbContext db) => _db = db;
+    public ReticleController(ReticleService reticleService)
+    {
+        _reticleService = reticleService;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
-        => Ok(await _db.Reticles.ToListAsync());
+        => Ok(await _reticleService.GetAllAsync());
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(string id)
     {
-        var ret = await _db.Reticles.FindAsync(id);
-        return ret == null
-            ? NotFound(new { error = $"Reticle '{id}' not found" })
-            : Ok(ret);
+        try
+        {
+            return Ok(await _reticleService.GetByIdAsync(id));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 
     /// <summary>
@@ -33,21 +39,13 @@ public class ReticleController : ControllerBase
     [HttpPost("{id}/inspect")]
     public async Task<IActionResult> Inspect(string id)
     {
-        var ret = await _db.Reticles.FindAsync(id);
-        if (ret == null) return NotFound(new { error = $"Reticle '{id}' not found" });
-
-        ret.ContaminationLevel = Math.Round(
-            ret.ContaminationLevel + 0.02 + new Random().NextDouble() * 0.03, 3);
-        ret.UsageCount++;
-
-        await _db.SaveChangesAsync();
-
-        return Ok(new
+        try
         {
-            reticle = ret,
-            warning = !ret.IsUsable
-                ? "Reticle no longer meets usability criteria — schedule replacement"
-                : (string?)null
-        });
+            return Ok(await _reticleService.InspectAsync(id));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 }
