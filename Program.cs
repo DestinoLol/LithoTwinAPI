@@ -25,6 +25,7 @@ builder.Services.AddScoped<FaultService>();
 builder.Services.AddScoped<TelemetryService>();
 builder.Services.AddScoped<ExposureService>();
 builder.Services.AddScoped<AlertService>();
+builder.Services.AddScoped<ReticleService>();
 
 // Simulation — background thermal drift engine
 builder.Services.AddHostedService<ThermalSimulationService>();
