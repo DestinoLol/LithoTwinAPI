@@ -61,7 +61,7 @@ public class ThermalSimulationService : BackgroundService
                 .ToListAsync(ct);
 
             // Compute drift via the pure simulation engine
-            double drift = SimulationEngine.ComputeThermalDrift(machine.State, activeFaults);
+            double drift = SimulationEngine.ComputeThermalDrift(machine.State, activeFaults, machine.CurrentTemperature);
             machine.CurrentTemperature = Math.Round(machine.CurrentTemperature + drift, 2);
             machine.LastUpdated = DateTime.UtcNow;
 
