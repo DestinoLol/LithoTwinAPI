@@ -43,4 +43,54 @@ public class SimulationEngineTests
         double runningWithFault = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Running, faults);
         Assert.True(runningWithFault > SystemConstants.ThermalOverloadDriftSpikeC);
     }
+
+    [Fact]
+    public void idle_state_cools_when_temperature_above_ambient()
+    {
+        var faults = Array.Empty<FaultType>();
+        // Machine at 25°C, ambient baseline is 20°C -> drift should be negative (cooling)
+        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, currentTemp: 25.0);
+        Assert.True(drift < 0);
+    }
+
+    [Fact]
+    public void idle_state_warms_when_temperature_below_ambient()
+    {
+        var faults = Array.Empty<FaultType>();
+        // Machine at 15°C, ambient baseline is 20°C -> drift should be positive (warming)
+        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, currentTemp: 15.0);
+        Assert.True(drift > 0);
+    }
+
+    [Fact]
+    public void is_overheat_condition_detects_exceeded_threshold_on_running_machine()
+    {
+        var machine = new Machine
+        {
+            Id = "NXE-3400B",
+            State = MachineLifecycleState.Running,
+            CurrentTemperature = 25.5,
+            MaxOperatingTemp = 24.0
+        };
+        var faults = Array.Empty<FaultType>();
+
+        bool isOverheat = SimulationEngine.IsOverheatCondition(machine, faults);
+        Assert.True(isOverheat);
+    }
+
+    [Fact]
+    public void is_overheat_condition_ignores_if_already_faulted_with_thermal_overload()
+    {
+        var machine = new Machine
+        {
+            Id = "NXE-3400B",
+            State = MachineLifecycleState.Running,
+            CurrentTemperature = 25.5,
+            MaxOperatingTemp = 24.0
+        };
+        var faults = new[] { FaultType.ThermalOverload };
+
+        bool isOverheat = SimulationEngine.IsOverheatCondition(machine, faults);
+        Assert.False(isOverheat);
+    }
 }
