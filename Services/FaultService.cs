@@ -90,6 +90,9 @@ public class FaultService
         return activeFaults;
     }
 
+    /// <summary>
+    /// Retrieves all currently active (unresolved) faults for the specified machine.
+    /// </summary>
     public async Task<List<MachineFault>> GetActiveFaultsAsync(string machineId)
     {
         return await _db.MachineFaults
