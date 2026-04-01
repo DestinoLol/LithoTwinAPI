@@ -77,4 +77,26 @@ public class BatchAndExportTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => exposureSvc.CompleteBatchAsync(batch.Id));
     }
+
+    [Fact]
+    public async Task get_factory_stats_aggregates_machine_and_alert_metrics()
+    {
+        var db = CreateDb("factory_stats_agg");
+        var alertSvc = new AlertService(db);
+
+        db.Alerts.Add(new Alert
+        {
+            MachineId = "NXE-3400B",
+            Severity = AlertSeverity.Warning,
+            Message = "Test warning"
+        });
+        await db.SaveChangesAsync();
+
+        var stats = await alertSvc.GetFactoryStatsAsync();
+        var json = System.Text.Json.JsonSerializer.Serialize(stats);
+
+        Assert.Contains("\"total\":3", json);
+        Assert.Contains("production", json);
+        Assert.Contains("alerts", json);
+    }
 }
