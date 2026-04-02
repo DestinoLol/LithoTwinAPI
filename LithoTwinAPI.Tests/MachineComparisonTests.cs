@@ -74,4 +74,27 @@ public class MachineComparisonTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => svc.CompareMachinesAsync(new List<string> { "NONEXISTENT-MACHINE" }));
     }
+
+    [Fact]
+    public async Task health_and_compare_report_identical_score_for_machine()
+    {
+        var db = CreateDb("health_and_compare_consistency");
+        var svc = new MachineLifecycleService(db);
+
+        // Test across all seeded machines (Running, Maintenance, etc.)
+        var machines = await db.Machines.ToListAsync();
+        var comparison = await svc.CompareMachinesAsync();
+
+        foreach (var m in machines)
+        {
+            var healthResult = await svc.ComputeHealthScoreAsync(m.Id);
+            var json = System.Text.Json.JsonSerializer.Serialize(healthResult);
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            double healthScore = doc.RootElement.GetProperty("overallScore").GetDouble();
+
+            var comparisonEntry = comparison.Machines.First(entry => entry.MachineId == m.Id);
+
+            Assert.Equal(healthScore, comparisonEntry.HealthScore);
+        }
+    }
 }
