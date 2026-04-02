@@ -63,6 +63,7 @@ public class MachineLifecycleService
             .Where(f => f.MachineId == machineId && f.ResolvedAt == null)
             .CountAsync();
 
+        double overall = ComputeOverallHealthScore(machine, activeFaultCount);
         double tempScore = ComputeTemperatureScore(machine);
         double uptimeScore = ComputeUptimeScore(machine);
         double stateScore = machine.State switch
@@ -70,14 +71,10 @@ public class MachineLifecycleService
             MachineLifecycleState.Running => 100,
             MachineLifecycleState.Calibrating => 70,
             MachineLifecycleState.Idle => 50,
-            MachineLifecycleState.Faulted => 0,
             MachineLifecycleState.Maintenance => 10,
+            MachineLifecycleState.Faulted => 0,
             _ => 0
         };
-
-        // Weights: temperature matters most for EUV optics stability
-        double overall = (tempScore * 0.5) + (uptimeScore * 0.2) + (stateScore * 0.3);
-        overall = Math.Max(0, overall - (activeFaultCount * 15));
 
         string comment = overall switch
         {
@@ -182,19 +179,7 @@ public class MachineLifecycleService
         foreach (var m in machines)
         {
             var faultCount = activeFaults.Count(f => f.MachineId == m.Id);
-            double tempScore = ComputeTemperatureScore(m);
-            double uptimeScore = ComputeUptimeScore(m);
-            double stateScore = m.State switch
-            {
-                MachineLifecycleState.Running => 100,
-                MachineLifecycleState.Calibrating => 75,
-                MachineLifecycleState.Idle => 60,
-                MachineLifecycleState.Maintenance => 30,
-                MachineLifecycleState.Faulted => 0,
-                _ => 50
-            };
-            double overall = (tempScore * 0.5) + (uptimeScore * 0.2) + (stateScore * 0.3);
-            overall = Math.Max(0, overall - (faultCount * 15));
+            double overall = ComputeOverallHealthScore(m, faultCount);
 
             entries.Add(new MachineComparisonEntry
             {
@@ -239,6 +224,32 @@ public class MachineLifecycleService
     }
 
     // ---- scoring helpers ----
+
+    /// <summary>
+    /// Health score (0–100) of a machine: weighted average of temperature, uptime, and lifecycle state,
+    /// degraded by 15 points per active fault.
+    /// Single shared definition used by ComputeHealthScoreAsync and CompareMachinesAsync to ensure
+    /// consistent metrics across endpoints.
+    /// </summary>
+    private static double ComputeOverallHealthScore(Machine machine, int activeFaultCount)
+    {
+        double stateScore = machine.State switch
+        {
+            MachineLifecycleState.Running => 100,
+            MachineLifecycleState.Calibrating => 70,
+            MachineLifecycleState.Idle => 50,
+            MachineLifecycleState.Maintenance => 10,
+            MachineLifecycleState.Faulted => 0,
+            _ => 0
+        };
+
+        // Weights: temperature is the dominant constraint for EUV optics stability
+        double overall = (ComputeTemperatureScore(machine) * 0.5)
+                       + (ComputeUptimeScore(machine) * 0.2)
+                       + (stateScore * 0.3);
+
+        return Math.Max(0, overall - (activeFaultCount * 15));
+    }
 
     private static double ComputeTemperatureScore(Machine m)
     {
