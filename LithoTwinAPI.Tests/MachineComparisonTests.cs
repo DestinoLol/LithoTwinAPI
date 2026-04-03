@@ -66,13 +66,25 @@ public class MachineComparisonTests
     }
 
     [Fact]
-    public async Task compare_nonexistent_machine_throws_invalid_operation()
+    public async Task compare_nonexistent_machine_throws_key_not_found()
     {
         var db = CreateDb("compare_not_found");
         var svc = new MachineLifecycleService(db);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<KeyNotFoundException>(
             () => svc.CompareMachinesAsync(new List<string> { "NONEXISTENT-MACHINE" }));
+    }
+
+    [Fact]
+    public async Task compare_partially_nonexistent_machines_throws_key_not_found()
+    {
+        var db = CreateDb("compare_partial_not_found");
+        var svc = new MachineLifecycleService(db);
+
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => svc.CompareMachinesAsync(new List<string> { "NXE-3400B", "GHOST-MACHINE" }));
+
+        Assert.Contains("GHOST-MACHINE", ex.Message);
     }
 
     [Fact]
