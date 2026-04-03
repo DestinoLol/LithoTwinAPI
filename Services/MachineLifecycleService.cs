@@ -168,8 +168,16 @@ public class MachineLifecycleService
             query = query.Where(m => machineIds.Contains(m.Id));
 
         var machines = await query.ToListAsync();
+
+        if (machineIds != null && machineIds.Any())
+        {
+            var missing = machineIds.Except(machines.Select(m => m.Id)).ToList();
+            if (missing.Any())
+                throw new KeyNotFoundException($"Machine(s) not found: {string.Join(", ", missing)}");
+        }
+
         if (!machines.Any())
-            throw new InvalidOperationException("No machines found matching the specified criteria.");
+            throw new KeyNotFoundException("No machines found matching the specified criteria.");
 
         var activeFaults = await _db.MachineFaults
             .Where(f => f.ResolvedAt == null)
