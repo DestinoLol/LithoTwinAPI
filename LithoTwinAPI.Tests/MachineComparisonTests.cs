@@ -24,7 +24,8 @@ public class MachineComparisonTests
         var db = CreateDb("compare_all_machines");
         var svc = new MachineLifecycleService(db);
 
-        var comparison = await svc.CompareMachinesAsync();
+        var ids = new List<string> { "NXE-3400B", "NXE-3600D", "TWINSCAN-EXE" };
+        var comparison = await svc.CompareMachinesAsync(ids);
 
         Assert.NotNull(comparison);
         Assert.NotEmpty(comparison.Machines);
@@ -59,7 +60,8 @@ public class MachineComparisonTests
             await faultSvc.InjectFaultAsync(m.Id, FaultType.ThermalOverload, "Forced fault");
         }
 
-        var comparison = await svc.CompareMachinesAsync();
+        var ids = machines.Select(m => m.Id).ToList();
+        var comparison = await svc.CompareMachinesAsync(ids);
 
         Assert.Null(comparison.RecommendedMachineId);
         Assert.Contains("No machines are currently eligible", comparison.RecommendationReason);
@@ -95,7 +97,8 @@ public class MachineComparisonTests
 
         // Test across all seeded machines (Running, Maintenance, etc.)
         var machines = await db.Machines.ToListAsync();
-        var comparison = await svc.CompareMachinesAsync();
+        var ids = machines.Select(m => m.Id).ToList();
+        var comparison = await svc.CompareMachinesAsync(ids);
 
         foreach (var m in machines)
         {

@@ -161,23 +161,18 @@ public class MachineLifecycleService
     /// Compares machines by health score, thermal headroom, active faults, and production eligibility.
     /// Returns an optimal production recommendation.
     /// </summary>
-    public async Task<MachineComparison> CompareMachinesAsync(List<string>? machineIds = null)
+    public async Task<MachineComparison> CompareMachinesAsync(List<string> machineIds)
     {
-        var query = _db.Machines.AsQueryable();
-        if (machineIds != null && machineIds.Any())
-            query = query.Where(m => machineIds.Contains(m.Id));
+        if (machineIds == null || !machineIds.Any())
+            throw new ArgumentException("At least one machine ID must be provided.", nameof(machineIds));
 
-        var machines = await query.ToListAsync();
+        var machines = await _db.Machines
+            .Where(m => machineIds.Contains(m.Id))
+            .ToListAsync();
 
-        if (machineIds != null && machineIds.Any())
-        {
-            var missing = machineIds.Except(machines.Select(m => m.Id)).ToList();
-            if (missing.Any())
-                throw new KeyNotFoundException($"Machine(s) not found: {string.Join(", ", missing)}");
-        }
-
-        if (!machines.Any())
-            throw new KeyNotFoundException("No machines found matching the specified criteria.");
+        var missing = machineIds.Except(machines.Select(m => m.Id)).ToList();
+        if (missing.Any())
+            throw new KeyNotFoundException($"Machine(s) not found: {string.Join(", ", missing)}");
 
         var activeFaults = await _db.MachineFaults
             .Where(f => f.ResolvedAt == null)

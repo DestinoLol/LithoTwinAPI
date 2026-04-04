@@ -177,15 +177,20 @@ public class FactoryController : ControllerBase
     [ProducesResponseType(typeof(MachineComparison), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CompareMachines([FromQuery] List<string>? machineIds = null)
+    public async Task<IActionResult> CompareMachines([FromQuery] string ids)
     {
-        try
-        {
-            var result = await _lifecycle.CompareMachinesAsync(machineIds);
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex) { return NotFound(new { error = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }
+        if (string.IsNullOrWhiteSpace(ids))
+            return BadRequest(new { error = "Query parameter 'ids' is required" });
+
+        var machineIds = ids
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        if (machineIds.Count < 2)
+            return BadRequest(new { error = "Provide at least 2 comma-separated machine IDs" });
+
+        try { return Ok(await _lifecycle.CompareMachinesAsync(machineIds)); }
+        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
     }
 
     // ---- alerts & stats ----
