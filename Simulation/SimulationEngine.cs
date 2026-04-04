@@ -33,7 +33,7 @@ public static class SimulationEngine
         {
             MachineLifecycleState.Running => 0.05 + _rng.NextDouble() * 0.1,
             MachineLifecycleState.Calibrating => 0.02 + _rng.NextDouble() * 0.04,
-            MachineLifecycleState.Idle => (SystemConstants.AmbientBaselineC - currentTemp) * SystemConstants.AmbientCoolingRatePerTick + (_rng.NextDouble() - 0.5) * 0.01,
+            MachineLifecycleState.Idle => (SystemConstants.AmbientBaselineC - currentTemp) * SystemConstants.AmbientConvergenceRatePerTick + (_rng.NextDouble() - 0.5) * 0.01,
             MachineLifecycleState.Faulted => -0.05 + _rng.NextDouble() * 0.03,
             _ => 0
         };
