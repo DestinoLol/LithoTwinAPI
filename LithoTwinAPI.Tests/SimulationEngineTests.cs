@@ -63,6 +63,46 @@ public class SimulationEngineTests
     }
 
     [Fact]
+    public void idle_drift_is_proportional_to_distance_from_ambient()
+    {
+        var faults = Array.Empty<FaultType>();
+        double far = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, 30.0);
+        double near = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, 21.0);
+        Assert.True(Math.Abs(far) > Math.Abs(near));
+    }
+
+    [Fact]
+    public void idle_drift_is_zero_exactly_at_ambient()
+    {
+        var faults = Array.Empty<FaultType>();
+        double drift = SimulationEngine.ComputeThermalDrift(
+            MachineLifecycleState.Idle, faults, SystemConstants.AmbientBaselineC);
+        Assert.Equal(0, drift, precision: 10);
+    }
+
+    [Fact]
+    public void idle_machine_settles_at_ambient_and_stays_there()
+    {
+        var faults = Array.Empty<FaultType>();
+        double temp = 30.0;
+        for (int i = 0; i < 2000; i++)
+            temp += SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, temp);
+
+        Assert.Equal(SystemConstants.AmbientBaselineC, temp, precision: 2);
+    }
+
+    [Fact]
+    public void idle_machine_below_ambient_warms_up_to_ambient()
+    {
+        var faults = Array.Empty<FaultType>();
+        double temp = 12.0;
+        for (int i = 0; i < 2000; i++)
+            temp += SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, temp);
+
+        Assert.Equal(SystemConstants.AmbientBaselineC, temp, precision: 2);
+    }
+
+    [Fact]
     public void is_overheat_condition_detects_exceeded_threshold_on_running_machine()
     {
         var machine = new Machine
