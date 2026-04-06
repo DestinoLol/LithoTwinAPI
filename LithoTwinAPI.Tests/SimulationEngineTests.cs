@@ -133,4 +133,25 @@ public class SimulationEngineTests
         bool isOverheat = SimulationEngine.IsOverheatCondition(machine, faults);
         Assert.False(isOverheat);
     }
+
+    [Theory]
+    [InlineData(MachineLifecycleState.Running,     25.5, 24.0, true)]
+    [InlineData(MachineLifecycleState.Running,     23.0, 24.0, false)]
+    [InlineData(MachineLifecycleState.Idle,        25.5, 24.0, false)]
+    [InlineData(MachineLifecycleState.Faulted,     25.5, 24.0, false)]
+    [InlineData(MachineLifecycleState.Calibrating, 25.5, 24.0, false)]
+    [InlineData(MachineLifecycleState.Maintenance, 25.5, 24.0, false)]
+    public void overheat_condition_only_triggers_on_running_above_limit(
+        MachineLifecycleState state, double current, double max, bool expected)
+    {
+        var machine = new Machine
+        {
+            Id = "TEST-01",
+            State = state,
+            CurrentTemperature = current,
+            MaxOperatingTemp = max
+        };
+
+        Assert.Equal(expected, SimulationEngine.IsOverheatCondition(machine, Array.Empty<FaultType>()));
+    }
 }
