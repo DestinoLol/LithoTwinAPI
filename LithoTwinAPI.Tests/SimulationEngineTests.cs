@@ -12,7 +12,7 @@ public class SimulationEngineTests
         var faults = Array.Empty<FaultType>();
         for (int i = 0; i < 20; i++)
         {
-            double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Running, faults);
+            double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Running, faults, 20.0);
             Assert.InRange(drift, 0.05, 0.15);
         }
     }
@@ -23,7 +23,7 @@ public class SimulationEngineTests
         var faults = Array.Empty<FaultType>();
         for (int i = 0; i < 20; i++)
         {
-            double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Calibrating, faults);
+            double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Calibrating, faults, 20.0);
             Assert.InRange(drift, 0.02, 0.06);
         }
     }
@@ -32,7 +32,7 @@ public class SimulationEngineTests
     public void maintenance_state_produces_zero_drift()
     {
         var faults = Array.Empty<FaultType>();
-        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Maintenance, faults);
+        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Maintenance, faults, 20.0);
         Assert.Equal(0, drift);
     }
 
@@ -40,7 +40,7 @@ public class SimulationEngineTests
     public void thermal_overload_fault_injects_spike_in_drift()
     {
         var faults = new[] { FaultType.ThermalOverload };
-        double runningWithFault = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Running, faults);
+        double runningWithFault = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Running, faults, 20.0);
         Assert.True(runningWithFault > SystemConstants.ThermalOverloadDriftSpikeC);
     }
 
@@ -49,7 +49,7 @@ public class SimulationEngineTests
     {
         var faults = Array.Empty<FaultType>();
         // Machine at 25°C, ambient baseline is 20°C -> drift should be negative (cooling)
-        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, currentTemp: 25.0);
+        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, 25.0);
         Assert.True(drift < 0);
     }
 
@@ -58,7 +58,7 @@ public class SimulationEngineTests
     {
         var faults = Array.Empty<FaultType>();
         // Machine at 15°C, ambient baseline is 20°C -> drift should be positive (warming)
-        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, currentTemp: 15.0);
+        double drift = SimulationEngine.ComputeThermalDrift(MachineLifecycleState.Idle, faults, 15.0);
         Assert.True(drift > 0);
     }
 

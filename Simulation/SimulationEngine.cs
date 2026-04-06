@@ -27,13 +27,15 @@ public static class SimulationEngine
     ///   Maintenance → no thermal simulation (returns 0)
     /// </summary>
     public static double ComputeThermalDrift(
-        MachineLifecycleState state, IReadOnlyList<FaultType> activeFaults, double currentTemp = 20.0)
+        MachineLifecycleState state,
+        IReadOnlyList<FaultType> activeFaults,
+        double currentTemperature)
     {
         double baseDrift = state switch
         {
             MachineLifecycleState.Running => 0.05 + _rng.NextDouble() * 0.1,
             MachineLifecycleState.Calibrating => 0.02 + _rng.NextDouble() * 0.04,
-            MachineLifecycleState.Idle => (SystemConstants.AmbientBaselineC - currentTemp) * SystemConstants.AmbientConvergenceRatePerTick,
+            MachineLifecycleState.Idle => (SystemConstants.AmbientBaselineC - currentTemperature) * SystemConstants.AmbientConvergenceRatePerTick,
             MachineLifecycleState.Faulted => -0.05 + _rng.NextDouble() * 0.03,
             _ => 0
         };
