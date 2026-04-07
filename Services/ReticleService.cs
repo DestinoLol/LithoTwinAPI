@@ -33,24 +33,18 @@ public class ReticleService
     /// Simulates a reticle inspection. Contamination increases with handling and photon exposure,
     /// capped at MaxContaminationLevel (1.0).
     /// </summary>
-    public async Task<object> InspectAsync(string id)
+    public async Task<Reticle> InspectAsync(string id)
     {
-        var ret = await GetByIdAsync(id);
+        var reticle = await GetByIdAsync(id);
 
-        double increase = 0.02 + _rng.NextDouble() * 0.03;
-        ret.ContaminationLevel = Math.Min(
-            SystemConstants.MaxContaminationLevel,
-            Math.Round(ret.ContaminationLevel + increase, 3));
-        ret.UsageCount++;
+        double increment = SystemConstants.ReticleContaminationPerInspection
+            + _rng.NextDouble() * SystemConstants.ReticleContaminationInspectionVariance;
+
+        reticle.ContaminationLevel = Math.Round(
+            Math.Min(SystemConstants.MaxContaminationLevel, reticle.ContaminationLevel + increment), 3);
+        reticle.UsageCount++;
 
         await _db.SaveChangesAsync();
-
-        return new
-        {
-            reticle = ret,
-            warning = !ret.IsUsable
-                ? "Reticle no longer meets usability criteria — schedule replacement"
-                : (string?)null
-        };
+        return reticle;
     }
 }

@@ -77,4 +77,10 @@ public static class SystemConstants
 
     /// <summary>Maximum theoretical contamination level cap for reticles (1.0 = 100%).</summary>
     public const double MaxContaminationLevel = 1.0;
+
+    /// <summary>Base contamination increment per inspection cycle (0–1).</summary>
+    public const double ReticleContaminationPerInspection = 0.02;
+
+    /// <summary>Maximum random variance component added per inspection cycle (0–1).</summary>
+    public const double ReticleContaminationInspectionVariance = 0.03;
 }
