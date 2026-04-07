@@ -73,7 +73,7 @@ public static class SystemConstants
 
     // --- Reticles ---
     /// <summary>Maximum contamination level before a reticle must be replaced (0.0 - 1.0).</summary>
-    public const double ReticleContaminationReplacementThreshold = 0.8;
+    public const double ReticleContaminationReplacementThreshold = 0.85;
 
     /// <summary>Maximum theoretical contamination level cap for reticles (1.0 = 100%).</summary>
     public const double MaxContaminationLevel = 1.0;
