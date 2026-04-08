@@ -41,7 +41,14 @@ public class ReticleController : ControllerBase
     {
         try
         {
-            return Ok(await _reticleService.InspectAsync(id));
+            var reticle = await _reticleService.InspectAsync(id);
+            return Ok(new
+            {
+                reticle,
+                warning = !reticle.IsUsable
+                    ? "Reticle no longer meets usability criteria — schedule replacement"
+                    : (string?)null
+            });
         }
         catch (KeyNotFoundException ex)
         {
