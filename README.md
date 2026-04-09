@@ -71,3 +71,51 @@ $$E_{\text{overlay}} = \sqrt{E_x^2 + E_y^2}$$
 $$\text{Overlay} = \left( \Delta T \times k_{\text{thermal}} + |\Delta f| \times k_{\text{focus}} \right) \times f_{\text{degradation}} + \text{noise}$$
 
 If total overlay exceeds `OverlaySpecLimitNm` (1.5nm), the exposure fails and generates a quality alert.
+
+---
+
+## API Reference
+
+### 1. Factory Management (`/api/factory`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/factory/system-status` | Overview of all machines, states, and runtime stats |
+| `GET` | `/api/factory/machines/{id}/health` | Weighted health score (0–100) and metric breakdown |
+| `GET` | `/api/factory/machines/{id}/maintenance-prediction` | Maintenance urgency and overlay degradation trend |
+| `GET` | `/api/factory/machines/compare?ids=A,B` | Side-by-side comparison and optimal machine recommendation |
+| `POST` | `/api/factory/machines/{id}/transition?targetState=&reason=` | Trigger validated state machine transition |
+| `GET` | `/api/factory/machines/{id}/transitions` | Audit history of lifecycle transitions |
+| `POST` | `/api/factory/machines/{id}/fault?faultType=&description=` | Inject simulated equipment fault |
+| `POST` | `/api/factory/machines/{id}/resolve-faults` | Clear active faults (Maintenance state required) |
+| `GET` | `/api/factory/machines/{id}/faults` | List active unresolved faults |
+| `POST` | `/api/factory/telemetry?machineId=&temperature=` | Ingest sensor reading with fault-aware validation |
+| `GET` | `/api/factory/telemetry/{id}/history` | Retrieve historical telemetry readings |
+| `GET` | `/api/factory/telemetry/{id}/trend` | Compute disjoint window trend (`rising`, `falling`, `stable`) |
+| `GET` | `/api/factory/telemetry/{id}/export` | Export machine telemetry as invariant CSV |
+| `POST` | `/api/factory/route-wafer` | Route wafer batch to coldest available Running machine |
+| `POST` | `/api/factory/batches/{id}/complete` | Complete wafer batch and increment wafer count |
+| `GET` | `/api/factory/alerts` | List unacknowledged system alerts |
+| `POST` | `/api/factory/alerts/{id}/acknowledge` | Acknowledge alert |
+| `GET` | `/api/factory/stats` | Aggregate factory production, machine, and alert metrics |
+
+### 2. EUV Exposure (`/api/exposure`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/exposure/run` | Execute EUV shot, compute overlay error, and log stage heat |
+| `GET` | `/api/exposure/history?machineId=` | Retrieve last 100 exposure results for a machine |
+
+### 3. Reticle Management (`/api/reticle`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/reticle` | List all reticles with usage and contamination levels |
+| `GET` | `/api/reticle/{id}` | Get reticle details |
+| `POST` | `/api/reticle/{id}/inspect` | Simulate inspection, update contamination, and check usability |
+
+### 4. Real-time Monitoring (`/api/live`)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/live/alerts` | Server-Sent Events (SSE) stream delivering real-time alerts |
