@@ -119,3 +119,58 @@ If total overlay exceeds `OverlaySpecLimitNm` (1.5nm), the exposure fails and ge
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/live/alerts` | Server-Sent Events (SSE) stream delivering real-time alerts |
+
+---
+
+## Build & Execution
+
+### Requirements
+- [.NET 7.0 SDK](https://dotnet.microsoft.com/download/dotnet/7.0)
+
+### Quickstart
+
+```bash
+# Clone and navigate to repository
+git clone https://github.com/DestinoLol/LithoTwinAPI.git
+cd LithoTwinAPI
+
+# Restore dependencies and build
+dotnet restore
+dotnet build --no-restore
+
+# Run automated tests (xUnit)
+dotnet test
+
+# Run API application
+dotnet run
+```
+
+### Swagger UI
+Once running, interactive API documentation is available at:
+`http://localhost:5159/swagger`
+
+![Swagger Endpoints](docs/swagger_endpoints.png)
+
+### Persistence Configuration
+By default, the application runs using EF Core `InMemory` provider with no external database dependencies. To persist data to a local SQLite database, set `"UseSqlite": true` in `appsettings.json`:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "UseSqlite": true,
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=lithotwin.db"
+  }
+}
+```
+
+---
+
+## License
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
