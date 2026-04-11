@@ -28,10 +28,12 @@ Implements system behavior. Services coordinate domain rules with persistence an
 
 | Service | Responsibility |
 |---|---|
-| `MachineLifecycleService` | State transitions via FSM, health scoring, maintenance prediction |
+| `MachineLifecycleService` | State transitions via FSM, health scoring, maintenance prediction, machine comparison |
 | `FaultService` | Fault injection with causal state effects, fault resolution during maintenance |
-| `TelemetryService` | Sensor ingestion with fault-aware noise injection, trend analysis, history |
+| `TelemetryService` | Sensor ingestion with fault-aware noise injection, trend analysis, invariant CSV export |
 | `ExposureService` | Overlay error computation, wafer routing, batch lifecycle |
+| `AlertService` | Alert acknowledgment lifecycle, unacknowledged querying, factory stats aggregation |
+| `ReticleService` | Reticle inspection simulation, contamination tracking, usability lifecycle |
 
 **Design principle:** Each service owns one behavioral domain. A reviewer can open one file and understand that subsystem completely.
 
@@ -52,9 +54,9 @@ Thin HTTP surface. Controllers validate input, delegate to services, and map dom
 
 | Controller | Responsibility |
 |---|---|
-| `FactoryController` | State transitions, faults, telemetry, alerts, machine status |
-| `ExposureController` | Exposure simulation, overlay results |
-| `ReticleController` | Reticle CRUD, contamination tracking |
+| `FactoryController` | State transitions, faults, telemetry, alerts, machine status, side-by-side comparison |
+| `ExposureController` | Exposure simulation, overlay results and diagnostics |
+| `ReticleController` | HTTP passthrough delegating reticle operations to `ReticleService` |
 | `LiveController` | Server-Sent Events for real-time alert streaming |
 
 **Design principle:** Controllers contain zero business logic. All domain rules live in services and domain objects.
@@ -99,12 +101,12 @@ The `ThermalSimulationService` runs as a `BackgroundService`, executing a tick e
 Each tick:
 
 1. Loads all machines and their active faults
-2. Computes thermal drift as a function of `(state, faults)`:
+2. Computes thermal drift as a function of `(state, faults, currentTemperature)`:
    - **Running:** gradual heat accumulation (+0.05 to +0.15°C)
    - **Calibrating:** moderate heat from alignment lasers (+0.02 to +0.06°C)
-   - **Idle:** slow drift toward ambient (±0.01°C)
-   - **Faulted:** depends on fault type
-   - **Maintenance:** no simulation
+   - **Idle:** passive geometric convergence toward ambient baseline `(20.0 - currentTemperature) * AmbientConvergenceRatePerTick` (0.01)
+   - **Faulted:** slight cooling as operations cease (-0.05 to -0.02°C), overridden by fault spikes
+   - **Maintenance:** no simulation (0°C drift)
 3. Applies fault-specific effects:
    - `ThermalOverload` → additional +0.5°C spike
    - `SensorFailure` → ±2°C noise
@@ -113,3 +115,21 @@ Each tick:
 6. Persists all changes
 
 The key property: **telemetry output is always explainable as `f(state, faults)`**. There is no hidden randomness without a causal source.
+
+---
+
+## Persistence & Database Lifecycle
+
+Database schema initialization and initial seed data application occur once during application startup in `Program.cs` via a dedicated `IServiceScope`.
+
+```csharp
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
+```
+
+This guarantees that:
+- Database schema and seed data are ready before HTTP requests or background services begin.
+- Scoped services like `MachineLifecycleService` remain stateless and do not trigger schema mutations in their constructors.
