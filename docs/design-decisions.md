@@ -118,3 +118,26 @@ SQLite is available (`UseSqlite: true` in appsettings) to prove that the persist
 These values represent physical properties of the simulated system (thermal expansion coefficient, overlay spec limit, sensor range). They are not deployment configuration — they're domain knowledge. Putting them in appsettings would conflate "how the system is deployed" with "how the system behaves."
 
 Named constants also make the codebase self-documenting. A reviewer seeing `SystemConstants.ThermalExpansionCoefficientNmPerC` immediately understands what `0.08` means — without needing to find a config file.
+
+---
+
+## 9. Thin Controllers with Business Logic in Services
+
+**Decision:** Controllers contain zero business logic or direct EF Core queries; all domain coordination, validation, and data operations are encapsulated within domain services (such as `ReticleService`, `ExposureService`, `MachineLifecycleService`).
+
+**Alternatives considered:**
+- Inline database queries and business calculations directly within controller action methods.
+- Fat controllers with private helper methods.
+
+**Why:**
+
+Direct database access and domain logic inside controllers leads to duplicated validation rules, difficult unit test setups requiring HTTP and action context mocks, and architectural leakage across layers.
+
+By delegating all business logic to scoped services, each controller's sole responsibility is:
+1. Parsing and binding HTTP input parameters (query strings, route params, request bodies).
+2. Invoking the appropriate domain service method.
+3. Translating domain outcomes or exceptions into standard HTTP responses (e.g., 200 OK, 400 Bad Request, 404 Not Found, 409 Conflict).
+
+This keeps controllers concise, highly readable, and testable without HTTP context dependencies, while enabling typed Swagger schema generation.
+
+**Trade-off:** Adds an additional layer of indirection for simple CRUD or passthrough operations (e.g., `ReticleController` delegating to `ReticleService`). This is an intentional trade-off to maintain architectural consistency across the entire codebase.
