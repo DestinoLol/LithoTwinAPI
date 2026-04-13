@@ -42,11 +42,11 @@ public class FactoryController : ControllerBase
         try
         {
             await _telemetry.IngestReadingAsync(machineId, temperature);
-            return Ok(new { message = $"Telemetry recorded for {machineId}" });
+            return Ok(new LithoTwinAPI.Models.Responses.SuccessResponse($"Telemetry recorded for {machineId}"));
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
-        catch (ArgumentOutOfRangeException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (InvalidOperationException ex) { return Conflict(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (ArgumentOutOfRangeException ex) { return BadRequest(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("telemetry/{machineId}/history")]
@@ -83,8 +83,8 @@ public class FactoryController : ControllerBase
             var transition = await _lifecycle.TransitionStateAsync(machineId, targetState, reason);
             return Ok(transition);
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidStateTransitionException ex) { return Conflict(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (InvalidStateTransitionException ex) { return Conflict(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("machines/{machineId}/transitions")]
@@ -107,7 +107,7 @@ public class FactoryController : ControllerBase
             var fault = await _faults.InjectFaultAsync(machineId, faultType, description);
             return Ok(fault);
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpPost("machines/{machineId}/resolve-faults")]
@@ -121,8 +121,8 @@ public class FactoryController : ControllerBase
             var resolved = await _faults.ResolveFaultsAsync(machineId);
             return Ok(new { resolvedCount = resolved.Count, faults = resolved });
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (InvalidOperationException ex) { return Conflict(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("machines/{machineId}/faults")]
@@ -144,8 +144,8 @@ public class FactoryController : ControllerBase
     public async Task<IActionResult> CompleteBatch(Guid id)
     {
         try { return Ok(await _exposure.CompleteBatchAsync(id)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (InvalidOperationException ex) { return Conflict(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     // ---- machines ----
@@ -156,21 +156,21 @@ public class FactoryController : ControllerBase
         => Ok(await _lifecycle.GetAllMachinesAsync());
 
     [HttpGet("machines/{machineId}/health")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(LithoTwinAPI.Models.Responses.HealthScoreResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LithoTwinAPI.Models.Responses.ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetHealth(string machineId)
     {
         try { return Ok(await _lifecycle.ComputeHealthScoreAsync(machineId)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("machines/{machineId}/maintenance-prediction")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(LithoTwinAPI.Models.Responses.MaintenancePredictionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(LithoTwinAPI.Models.Responses.ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PredictMaintenance(string machineId)
     {
         try { return Ok(await _lifecycle.PredictMaintenanceAsync(machineId)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("machines/compare")]
@@ -180,17 +180,17 @@ public class FactoryController : ControllerBase
     public async Task<IActionResult> CompareMachines([FromQuery] string ids)
     {
         if (string.IsNullOrWhiteSpace(ids))
-            return BadRequest(new { error = "Query parameter 'ids' is required" });
+            return BadRequest(new LithoTwinAPI.Models.Responses.ErrorResponse("Query parameter 'ids' is required"));
 
         var machineIds = ids
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
 
         if (machineIds.Count < 2)
-            return BadRequest(new { error = "Provide at least 2 comma-separated machine IDs" });
+            return BadRequest(new LithoTwinAPI.Models.Responses.ErrorResponse("Provide at least 2 comma-separated machine IDs"));
 
         try { return Ok(await _lifecycle.CompareMachinesAsync(machineIds)); }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     // ---- alerts & stats ----
@@ -208,9 +208,9 @@ public class FactoryController : ControllerBase
         try
         {
             await _alerts.AcknowledgeAsync(id);
-            return Ok(new { message = "Alert acknowledged" });
+            return Ok(new LithoTwinAPI.Models.Responses.SuccessResponse("Alert acknowledged"));
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("stats")]
