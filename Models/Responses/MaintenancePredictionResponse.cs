@@ -6,5 +6,6 @@ public record MaintenancePredictionResponse(
     string Urgency,
     double? AverageOverlayNm,
     bool IsOverlayDegrading,
-    int ActiveFaultCount
+    int ActiveFaultCount,
+    string? Note
 );
