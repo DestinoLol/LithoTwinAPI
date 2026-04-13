@@ -103,9 +103,7 @@ public class MachineComparisonTests
         foreach (var m in machines)
         {
             var healthResult = await svc.ComputeHealthScoreAsync(m.Id);
-            var json = System.Text.Json.JsonSerializer.Serialize(healthResult);
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            double healthScore = doc.RootElement.GetProperty("overallScore").GetDouble();
+            double healthScore = healthResult.OverallScore;
 
             var comparisonEntry = comparison.Machines.First(entry => entry.MachineId == m.Id);
 

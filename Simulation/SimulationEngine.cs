@@ -14,8 +14,6 @@ namespace LithoTwinAPI.Simulation;
 /// </summary>
 public static class SimulationEngine
 {
-    private static readonly Random _rng = new();
-
     /// <summary>
     /// Computes temperature change for a single simulation tick.
     /// 
@@ -29,14 +27,15 @@ public static class SimulationEngine
     public static double ComputeThermalDrift(
         MachineLifecycleState state,
         IReadOnlyList<FaultType> activeFaults,
-        double currentTemperature)
+        double currentTemperature,
+        double noiseFactor = 0.5)
     {
         double baseDrift = state switch
         {
-            MachineLifecycleState.Running => 0.05 + _rng.NextDouble() * 0.1,
-            MachineLifecycleState.Calibrating => 0.02 + _rng.NextDouble() * 0.04,
+            MachineLifecycleState.Running => 0.05 + noiseFactor * 0.1,
+            MachineLifecycleState.Calibrating => 0.02 + noiseFactor * 0.04,
             MachineLifecycleState.Idle => (SystemConstants.AmbientBaselineC - currentTemperature) * SystemConstants.AmbientConvergenceRatePerTick,
-            MachineLifecycleState.Faulted => -0.05 + _rng.NextDouble() * 0.03,
+            MachineLifecycleState.Faulted => -0.05 + noiseFactor * 0.03,
             _ => 0
         };
 
@@ -46,7 +45,7 @@ public static class SimulationEngine
 
         // SensorFailure corrupts the drift measurement
         if (activeFaults.Contains(FaultType.SensorFailure))
-            baseDrift += (_rng.NextDouble() - 0.5) * SystemConstants.SensorFailureNoiseAmplitudeC;
+            baseDrift += (noiseFactor - 0.5) * SystemConstants.SensorFailureNoiseAmplitudeC;
 
         return baseDrift;
     }

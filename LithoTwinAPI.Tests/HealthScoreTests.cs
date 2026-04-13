@@ -42,17 +42,13 @@ public class HealthScoreTests
         var faultSvc = new FaultService(db);
         var svc = new MachineLifecycleService(db);
 
-        var initialJson = System.Text.Json.JsonSerializer.Serialize(
-            await svc.ComputeHealthScoreAsync("NXE-3400B"));
-        using var docInitial = System.Text.Json.JsonDocument.Parse(initialJson);
-        double initialScore = docInitial.RootElement.GetProperty("overallScore").GetDouble();
+        var initialResult = await svc.ComputeHealthScoreAsync("NXE-3400B");
+        double initialScore = initialResult.OverallScore;
 
         await faultSvc.InjectFaultAsync("NXE-3400B", FaultType.LaserDegradation, "laser power low");
 
-        var degradedJson = System.Text.Json.JsonSerializer.Serialize(
-            await svc.ComputeHealthScoreAsync("NXE-3400B"));
-        using var docDegraded = System.Text.Json.JsonDocument.Parse(degradedJson);
-        double degradedScore = docDegraded.RootElement.GetProperty("overallScore").GetDouble();
+        var degradedResult = await svc.ComputeHealthScoreAsync("NXE-3400B");
+        double degradedScore = degradedResult.OverallScore;
 
         Assert.True(degradedScore < initialScore);
     }
@@ -66,10 +62,8 @@ public class HealthScoreTests
 
         await faultSvc.InjectFaultAsync("NXE-3400B", FaultType.ThermalOverload, "cooling pump failure");
 
-        var json = System.Text.Json.JsonSerializer.Serialize(
-            await svc.ComputeHealthScoreAsync("NXE-3400B"));
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
-        string comment = doc.RootElement.GetProperty("comment").GetString()!;
+        var result = await svc.ComputeHealthScoreAsync("NXE-3400B");
+        string comment = result.Comment;
 
         Assert.StartsWith("critical", comment);
     }

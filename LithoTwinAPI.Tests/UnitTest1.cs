@@ -167,11 +167,10 @@ public class ManufacturingServiceTests
         var svc = new MachineLifecycleService(db);
 
         var result = await svc.ComputeHealthScoreAsync("NXE-3400B");
-        var json = System.Text.Json.JsonSerializer.Serialize(result);
 
-        Assert.Contains("overallScore", json);
-        Assert.Contains("activeFaultCount", json);
-        Assert.Contains("throughputFactor", json);
+        Assert.True(result.OverallScore > 0);
+        Assert.True(result.ActiveFaultCount >= 0);
+        Assert.True(result.ThroughputFactor >= 0);
     }
 
     // ---- trend ----
