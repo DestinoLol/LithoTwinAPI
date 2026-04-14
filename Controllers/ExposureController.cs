@@ -1,5 +1,6 @@
 using LithoTwinAPI.Services;
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LithoTwinAPI.Controllers;
@@ -23,8 +24,8 @@ public class ExposureController : ControllerBase
             var result = await _exposure.RunExposureAsync(req);
             return Ok(result);
         }
-        catch (KeyNotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { error = ex.Message }); }
+        catch (KeyNotFoundException ex) { return NotFound(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
+        catch (InvalidOperationException ex) { return Conflict(new LithoTwinAPI.Models.Responses.ErrorResponse(ex.Message)); }
     }
 
     [HttpGet("history")]
@@ -33,7 +34,7 @@ public class ExposureController : ControllerBase
     public async Task<IActionResult> GetHistory([FromQuery] string machineId)
     {
         if (string.IsNullOrEmpty(machineId))
-            return BadRequest(new { error = "machineId is required" });
+            return BadRequest(new LithoTwinAPI.Models.Responses.ErrorResponse("machineId is required"));
 
         return Ok(await _exposure.GetHistoryAsync(machineId));
     }

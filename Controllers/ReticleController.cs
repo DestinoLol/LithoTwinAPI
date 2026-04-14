@@ -1,4 +1,5 @@
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Models.Responses;
 using LithoTwinAPI.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,13 @@ public class ReticleController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<Reticle>), 200)]
     public async Task<IActionResult> GetAll()
         => Ok(await _reticleService.GetAllAsync());
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(Reticle), 200)]
+    [ProducesResponseType(typeof(ErrorResponse), 404)]
     public async Task<IActionResult> GetById(string id)
     {
         try
@@ -28,7 +32,7 @@ public class ReticleController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { error = ex.Message });
+            return NotFound(new ErrorResponse(ex.Message));
         }
     }
 
@@ -37,22 +41,22 @@ public class ReticleController : ControllerBase
     /// due to particle deposition from outgassing and EUV photon exposure.
     /// </summary>
     [HttpPost("{id}/inspect")]
+    [ProducesResponseType(typeof(ReticleInspectionResponse), 200)]
+    [ProducesResponseType(typeof(ErrorResponse), 404)]
     public async Task<IActionResult> Inspect(string id)
     {
         try
         {
             var reticle = await _reticleService.InspectAsync(id);
-            return Ok(new
-            {
-                reticle,
-                warning = !reticle.IsUsable
-                    ? "Reticle no longer meets usability criteria — schedule replacement"
-                    : (string?)null
-            });
+            string? warning = !reticle.IsUsable
+                ? "Reticle no longer meets usability criteria — schedule replacement"
+                : null;
+                
+            return Ok(new ReticleInspectionResponse(reticle, warning));
         }
         catch (KeyNotFoundException ex)
         {
-            return NotFound(new { error = ex.Message });
+            return NotFound(new ErrorResponse(ex.Message));
         }
     }
 }
