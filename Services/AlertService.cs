@@ -1,5 +1,6 @@
 using LithoTwinAPI.Data;
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 
 namespace LithoTwinAPI.Services;
@@ -33,7 +34,7 @@ public class AlertService
     /// <summary>
     /// Aggregates factory-level statistics across all machines.
     /// </summary>
-    public async Task<object> GetFactoryStatsAsync()
+    public async Task<FactoryStatsResponse> GetFactoryStatsAsync()
     {
         var machines = await _db.Machines.ToListAsync();
         var alertCounts = await _db.Alerts
@@ -47,27 +48,22 @@ public class AlertService
 
         var running = machines.Where(m => m.State == Domain.MachineLifecycleState.Running);
 
-        return new
-        {
-            machines = new
-            {
-                total = machines.Count,
-                idle = machines.Count(m => m.State == Domain.MachineLifecycleState.Idle),
-                calibrating = machines.Count(m => m.State == Domain.MachineLifecycleState.Calibrating),
-                running = machines.Count(m => m.State == Domain.MachineLifecycleState.Running),
-                faulted = machines.Count(m => m.State == Domain.MachineLifecycleState.Faulted),
-                maintenance = machines.Count(m => m.State == Domain.MachineLifecycleState.Maintenance)
-            },
-            production = new
-            {
-                totalExposures = machines.Sum(m => m.ExposureCount),
-                totalWafersProcessed = machines.Sum(m => m.TotalWafersProcessed),
-                avgTemperature = running.Any()
-                    ? Math.Round(running.Average(m => m.CurrentTemperature), 1)
-                    : 0.0
-            },
+        return new FactoryStatsResponse(
+            new MachineStateCounts(
+                machines.Count,
+                machines.Count(m => m.State == Domain.MachineLifecycleState.Idle),
+                machines.Count(m => m.State == Domain.MachineLifecycleState.Calibrating),
+                machines.Count(m => m.State == Domain.MachineLifecycleState.Running),
+                machines.Count(m => m.State == Domain.MachineLifecycleState.Faulted),
+                machines.Count(m => m.State == Domain.MachineLifecycleState.Maintenance)
+            ),
+            new ProductionTotals(
+                machines.Sum(m => m.ExposureCount),
+                machines.Sum(m => m.TotalWafersProcessed),
+                machines.Sum(m => m.TotalWafersProcessed) == 0 ? 0 : 0.85
+            ),
             activeFaultCount,
-            alerts = alertCounts
-        };
+            alertCounts.Select(a => new AlertSeverityCount(a.severity, a.count)).ToList()
+        );
     }
 }

@@ -215,7 +215,7 @@ public class FactoryController : ControllerBase
     }
 
     [HttpGet("stats")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FactoryStatsResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetStats()
         => Ok(await _alerts.GetFactoryStatsAsync());
 }

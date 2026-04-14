@@ -93,10 +93,9 @@ public class BatchAndExportTests
         await db.SaveChangesAsync();
 
         var stats = await alertSvc.GetFactoryStatsAsync();
-        var json = System.Text.Json.JsonSerializer.Serialize(stats);
-
-        Assert.Contains("\"total\":3", json);
-        Assert.Contains("production", json);
-        Assert.Contains("alerts", json);
+        
+        Assert.Equal(3, stats.Machines.Total);
+        Assert.NotNull(stats.Production);
+        Assert.NotNull(stats.Alerts);
     }
 }
