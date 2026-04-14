@@ -1,6 +1,7 @@
 using LithoTwinAPI.Data;
 using LithoTwinAPI.Domain;
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 
 namespace LithoTwinAPI.Services;
@@ -56,7 +57,7 @@ public class MachineLifecycleService
     /// Computes machine health as a weighted score of temperature, uptime, and lifecycle state.
     /// Active faults degrade the score proportionally.
     /// </summary>
-    public async Task<LithoTwinAPI.Models.Responses.HealthScoreResponse> ComputeHealthScoreAsync(string machineId)
+    public async Task<HealthScoreResponse> ComputeHealthScoreAsync(string machineId)
     {
         var machine = await FindMachineOrThrowAsync(machineId);
         var activeFaultCount = await _db.MachineFaults
@@ -84,16 +85,16 @@ public class MachineLifecycleService
             _ => "critical — take offline"
         };
 
-        return new LithoTwinAPI.Models.Responses.HealthScoreResponse(
+        return new HealthScoreResponse(
             machineId,
             Math.Round(overall, 1),
             comment,
             activeFaultCount,
             machine.ThroughputFactor,
-            new LithoTwinAPI.Models.Responses.HealthBreakdown(
-                new LithoTwinAPI.Models.Responses.HealthComponent(Math.Round(tempScore, 1), 0.5, $"{machine.CurrentTemperature:F1}°C / {machine.MaxOperatingTemp:F1}°C"),
-                new LithoTwinAPI.Models.Responses.HealthComponent(Math.Round(uptimeScore, 1), 0.2, $"{machine.UptimeHours:F0}h"),
-                new LithoTwinAPI.Models.Responses.HealthComponent(stateScore, 0.3, machine.State.ToString())
+            new HealthBreakdown(
+                new HealthComponent(Math.Round(tempScore, 1), 0.5, $"{machine.CurrentTemperature:F1}°C / {machine.MaxOperatingTemp:F1}°C"),
+                new HealthComponent(Math.Round(uptimeScore, 1), 0.2, $"{machine.UptimeHours:F0}h"),
+                new HealthComponent(stateScore, 0.3, machine.State.ToString())
             )
         );
     }
@@ -101,7 +102,7 @@ public class MachineLifecycleService
     /// <summary>
     /// Predicts maintenance urgency based on uptime cycles and overlay drift monitoring.
     /// </summary>
-    public async Task<LithoTwinAPI.Models.Responses.MaintenancePredictionResponse> PredictMaintenanceAsync(string machineId)
+    public async Task<MaintenancePredictionResponse> PredictMaintenanceAsync(string machineId)
     {
         var machine = await FindMachineOrThrowAsync(machineId);
 
@@ -134,7 +135,7 @@ public class MachineLifecycleService
             .Where(f => f.MachineId == machineId && f.ResolvedAt == null)
             .CountAsync();
 
-        return new LithoTwinAPI.Models.Responses.MaintenancePredictionResponse(
+        return new MaintenancePredictionResponse(
             machineId,
             Math.Round(hoursLeft, 0),
             urgency,
