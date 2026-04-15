@@ -67,15 +67,7 @@ public class MachineLifecycleService
         double overall = ComputeOverallHealthScore(machine, activeFaultCount);
         double tempScore = ComputeTemperatureScore(machine);
         double uptimeScore = ComputeUptimeScore(machine);
-        double stateScore = machine.State switch
-        {
-            MachineLifecycleState.Running => 100,
-            MachineLifecycleState.Calibrating => 70,
-            MachineLifecycleState.Idle => 50,
-            MachineLifecycleState.Maintenance => 10,
-            MachineLifecycleState.Faulted => 0,
-            _ => 0
-        };
+        double stateScore = ComputeStateScore(machine);
 
         string comment = overall switch
         {
@@ -92,9 +84,9 @@ public class MachineLifecycleService
             activeFaultCount,
             machine.ThroughputFactor,
             new HealthBreakdown(
-                new HealthComponent(Math.Round(tempScore, 1), 0.5, $"{machine.CurrentTemperature:F1}°C / {machine.MaxOperatingTemp:F1}°C"),
-                new HealthComponent(Math.Round(uptimeScore, 1), 0.2, $"{machine.UptimeHours:F0}h"),
-                new HealthComponent(stateScore, 0.3, machine.State.ToString())
+                new HealthComponent(Math.Round(tempScore, 1), SystemConstants.HealthWeightTemperature, $"{machine.CurrentTemperature:F1}°C / {machine.MaxOperatingTemp:F1}°C"),
+                new HealthComponent(Math.Round(uptimeScore, 1), SystemConstants.HealthWeightUptime, $"{machine.UptimeHours:F0}h"),
+                new HealthComponent(stateScore, SystemConstants.HealthWeightState, machine.State.ToString())
             )
         );
     }
@@ -229,24 +221,23 @@ public class MachineLifecycleService
     /// Single shared definition used by ComputeHealthScoreAsync and CompareMachinesAsync to ensure
     /// consistent metrics across endpoints.
     /// </summary>
+    private static double ComputeStateScore(Machine machine) => machine.State switch
+    {
+        MachineLifecycleState.Running => 100,
+        MachineLifecycleState.Calibrating => 70,
+        MachineLifecycleState.Idle => 50,
+        MachineLifecycleState.Maintenance => 10,
+        MachineLifecycleState.Faulted => 0
+    };
+
     private static double ComputeOverallHealthScore(Machine machine, int activeFaultCount)
     {
-        double stateScore = machine.State switch
-        {
-            MachineLifecycleState.Running => 100,
-            MachineLifecycleState.Calibrating => 70,
-            MachineLifecycleState.Idle => 50,
-            MachineLifecycleState.Maintenance => 10,
-            MachineLifecycleState.Faulted => 0,
-            _ => 0
-        };
-
         // Weights: temperature is the dominant constraint for EUV optics stability
-        double overall = (ComputeTemperatureScore(machine) * 0.5)
-                       + (ComputeUptimeScore(machine) * 0.2)
-                       + (stateScore * 0.3);
+        double overall = (ComputeTemperatureScore(machine) * SystemConstants.HealthWeightTemperature)
+                       + (ComputeUptimeScore(machine) * SystemConstants.HealthWeightUptime)
+                       + (ComputeStateScore(machine) * SystemConstants.HealthWeightState);
 
-        return Math.Max(0, overall - (activeFaultCount * 15));
+        return Math.Max(0, overall - (activeFaultCount * SystemConstants.HealthPenaltyPerActiveFault));
     }
 
     private static double ComputeTemperatureScore(Machine m)

@@ -58,6 +58,12 @@ public static class SystemConstants
     /// <summary>Throughput degradation factor applied per active LaserDegradation fault.</summary>
     public const double LaserDegradationThroughputPenalty = 0.3;
 
+    // --- Health scoring ---
+    public const double HealthWeightTemperature = 0.5;
+    public const double HealthWeightUptime = 0.2;
+    public const double HealthWeightState = 0.3;
+    public const double HealthPenaltyPerActiveFault = 15.0;
+
     /// <summary>Temperature spike (°C) injected per tick when ThermalOverload is active.</summary>
     public const double ThermalOverloadDriftSpikeC = 0.5;
 
