@@ -131,7 +131,7 @@ public class ExposureService
         double focusPenalty = Math.Abs(req.FocusOffset) * SystemConstants.FocusPenaltyCoefficientNmPerNm;
 
         // LaserDegradation increases overlay error via throughput degradation
-        double faultPenalty = 1.0 + (1.0 - machine.ThroughputFactor) * 0.5;
+        double faultPenalty = 1.0 + (1.0 - machine.ThroughputFactor) * SystemConstants.OverlayDegradationMaxMultiplier;
 
         var result = new ExposureResult
         {
@@ -140,9 +140,9 @@ public class ExposureService
             DoseUsed = req.DoseEnergy,
             FocusUsed = req.FocusOffset,
             OverlayErrorX = Math.Round(
-                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * 0.4, 3),
+                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3),
             OverlayErrorY = Math.Round(
-                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * 0.4, 3)
+                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3)
         };
 
         double totalOverlay = Math.Sqrt(

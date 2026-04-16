@@ -37,8 +37,13 @@ public static class SystemConstants
     /// <summary>Hours remaining before maintenance is classified as upcoming.</summary>
     public const double MaintenanceUpcomingThresholdHours = 500.0;
 
-    /// <summary>Average overlay threshold (nm) above which overlay degradation is flagged.</summary>
     public const double OverlayDegradationThresholdNm = 1.0;
+
+    /// <summary>Maximum overlay noise amplitude added per exposure (nm).</summary>
+    public const double OverlayNoiseAmplitudeNm = 0.4;
+
+    /// <summary>Multiplier for overlay degradation based on throughput loss.</summary>
+    public const double OverlayDegradationMaxMultiplier = 0.5;
 
     // --- Telemetry ---
     /// <summary>Minimum plausible sensor reading (°C). Below this is treated as sensor garbage.</summary>
