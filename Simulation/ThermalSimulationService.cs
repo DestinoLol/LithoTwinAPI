@@ -1,4 +1,5 @@
 using LithoTwinAPI.Data;
+using LithoTwinAPI.Services;
 using LithoTwinAPI.Domain;
 using LithoTwinAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -68,29 +69,11 @@ public class ThermalSimulationService : BackgroundService
             // Overheat detection → fault injection
             if (SimulationEngine.IsOverheatCondition(machine, activeFaults))
             {
-                var fault = new MachineFault
-                {
-                    MachineId = machine.Id,
-                    FaultType = FaultType.ThermalOverload,
-                    Description = $"Auto-detected: temperature {machine.CurrentTemperature:F1}°C exceeds limit"
-                };
-                db.MachineFaults.Add(fault);
-
-                var fsm = new MachineStateMachine(machine.State);
-                var transition = fsm.TransitionTo(
-                    MachineLifecycleState.Faulted, machine.Id,
-                    $"ThermalOverload fault: {machine.CurrentTemperature:F1}°C");
-                machine.State = fsm.CurrentState;
-                db.StateTransitions.Add(transition);
-
-                db.Alerts.Add(new Alert
-                {
-                    MachineId = machine.Id,
-                    Severity = AlertSeverity.Critical,
-                    Message = $"Thermal overload at {machine.CurrentTemperature:F1}°C — machine faulted"
-                });
-
-                _logger.LogWarning("{MachineId} thermal overload, transitioned to Faulted", machine.Id);
+                var faultService = scope.ServiceProvider.GetRequiredService<FaultService>();
+                await faultService.InjectFaultAsync(machine.Id, FaultType.ThermalOverload,
+                    $"Auto-detected: temperature {machine.CurrentTemperature:F1}°C exceeds limit");
+                    
+                _logger.LogWarning("{MachineId} thermal overload, fault injected", machine.Id);
             }
 
             db.TelemetryReadings.Add(new TelemetryReading

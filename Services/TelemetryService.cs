@@ -1,6 +1,7 @@
 using LithoTwinAPI.Data;
 using LithoTwinAPI.Domain;
 using LithoTwinAPI.Models;
+using LithoTwinAPI.Simulation;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 
@@ -69,9 +70,7 @@ public class TelemetryService
         });
 
         // Overheat detection → fault injection via FaultService
-        if (recordedTemp >= machine.MaxOperatingTemp &&
-            machine.State == MachineLifecycleState.Running &&
-            !activeFaultTypes.Contains(FaultType.ThermalOverload))
+        if (SimulationEngine.IsOverheatCondition(machine, activeFaultTypes))
         {
             await _db.SaveChangesAsync();
             await _faultService.InjectFaultAsync(machineId, FaultType.ThermalOverload,
