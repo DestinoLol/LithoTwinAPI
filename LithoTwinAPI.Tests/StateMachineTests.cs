@@ -100,13 +100,5 @@ public class StateMachineTests
         Assert.False(fsm.CanTransitionTo(MachineLifecycleState.Running));
     }
 
-    [Fact]
-    public void get_allowed_transitions_returns_correct_set()
-    {
-        var fsm = new MachineStateMachine(MachineLifecycleState.Faulted);
-        var allowed = fsm.GetAllowedTransitions();
 
-        Assert.Single(allowed);
-        Assert.Contains(MachineLifecycleState.Maintenance, allowed);
-    }
 }

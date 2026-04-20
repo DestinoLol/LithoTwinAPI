@@ -84,12 +84,4 @@ public sealed class MachineStateMachine
     public bool CanTransitionTo(MachineLifecycleState target)
         => _currentState != target && AllowedTransitions.Contains((_currentState, target));
 
-    /// <summary>
-    /// Returns all states reachable from the current state.
-    /// </summary>
-    public IReadOnlyList<MachineLifecycleState> GetAllowedTransitions()
-        => AllowedTransitions
-            .Where(t => t.From == _currentState)
-            .Select(t => t.To)
-            .ToList();
 }
