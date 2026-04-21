@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LithoTwinAPI.Tests;
 
-public class ManufacturingServiceTests
+public class CoreServiceTests
 {
     private AppDbContext CreateDb(string name)
     {
