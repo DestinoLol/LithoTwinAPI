@@ -8,9 +8,6 @@ namespace LithoTwinAPI.Simulation;
 /// Computes per-tick temperature drift as a deterministic function of machine state and active faults.
 /// 
 /// Formula: drift = base_drift(state) + Σ fault_effects(active_faults)
-/// 
-/// This is separated from the BackgroundService infrastructure to keep
-/// the computation testable and the execution lifecycle independent.
 /// </summary>
 public static class SimulationEngine
 {
