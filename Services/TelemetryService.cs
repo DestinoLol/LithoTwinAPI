@@ -19,7 +19,7 @@ public class TelemetryService
 {
     private readonly AppDbContext _db;
     private readonly FaultService _faultService;
-    private static readonly Random _rng = new();
+    
 
     public TelemetryService(AppDbContext db, FaultService faultService)
     {
@@ -141,7 +141,7 @@ public class TelemetryService
         if (!activeFaults.Contains(FaultType.SensorFailure))
             return actualTemp;
 
-        double noise = (_rng.NextDouble() - 0.5) * SystemConstants.SensorFailureNoiseAmplitudeC * 2;
+        double noise = (Random.Shared.NextDouble() - 0.5) * SystemConstants.SensorFailureNoiseAmplitudeC * 2;
         return Math.Round(actualTemp + noise, 2);
     }
 }

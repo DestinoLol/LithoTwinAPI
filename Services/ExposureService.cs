@@ -16,7 +16,7 @@ namespace LithoTwinAPI.Services;
 public class ExposureService
 {
     private readonly AppDbContext _db;
-    private static readonly Random _rng = new();
+    
 
     public ExposureService(AppDbContext db) => _db = db;
 
@@ -37,7 +37,7 @@ public class ExposureService
 
         // Each exposure deposits energy into the wafer stage
         machine.CurrentTemperature += SystemConstants.ExposureHeatContributionBaseC
-            + _rng.NextDouble() * SystemConstants.ExposureHeatContributionVarianceC;
+            + Random.Shared.NextDouble() * SystemConstants.ExposureHeatContributionVarianceC;
         machine.ExposureCount++;
         machine.LastUpdated = DateTime.UtcNow;
 
@@ -140,9 +140,9 @@ public class ExposureService
             DoseUsed = req.DoseEnergy,
             FocusUsed = req.FocusOffset,
             OverlayErrorX = Math.Round(
-                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3),
+                (thermalFactor + focusPenalty) * faultPenalty + (Random.Shared.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3),
             OverlayErrorY = Math.Round(
-                (thermalFactor + focusPenalty) * faultPenalty + (_rng.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3)
+                (thermalFactor + focusPenalty) * faultPenalty + (Random.Shared.NextDouble() - 0.5) * SystemConstants.OverlayNoiseAmplitudeNm, 3)
         };
 
         double totalOverlay = Math.Sqrt(

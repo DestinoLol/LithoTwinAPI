@@ -11,7 +11,7 @@ namespace LithoTwinAPI.Services;
 public class ReticleService
 {
     private readonly AppDbContext _db;
-    private static readonly Random _rng = new();
+    
 
     public ReticleService(AppDbContext db)
     {
@@ -38,7 +38,7 @@ public class ReticleService
         var reticle = await GetByIdAsync(id);
 
         double increment = SystemConstants.ReticleContaminationPerInspection
-            + _rng.NextDouble() * SystemConstants.ReticleContaminationInspectionVariance;
+            + Random.Shared.NextDouble() * SystemConstants.ReticleContaminationInspectionVariance;
 
         reticle.ContaminationLevel = Math.Round(
             Math.Min(SystemConstants.MaxContaminationLevel, reticle.ContaminationLevel + increment), 3);
