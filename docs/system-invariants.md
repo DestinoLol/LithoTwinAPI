@@ -1,97 +1,57 @@
 # System Invariants
 
-These are the rules that must always hold true in the system. They are enforced in code and documented here for clarity.
+This document outlines the structural constraints of the system. These rules are strictly enforced in code. If any of these conditions are violated, the system is considered to be in an invalid state.
 
-Invariants are not aspirational. They are structural constraints — if any of these are violated, the system is in an invalid state.
+## Machine Lifecycle
 
----
+State changes for machines must exclusively go through the MachineStateMachine. Direct assignment of the machine state is prohibited because it bypasses validation.
 
-## Machine Lifecycle Invariants
+The state transitions are strictly governed:
+- A machine in the Faulted state cannot transition directly to Running or Idle; it must first go to Maintenance to resolve the fault.
+- A machine in the Running state cannot transition directly to Idle without passing through Maintenance or Calibrating.
+- A machine in Maintenance must undergo Calibrating before it can transition back to Running.
 
-**INV-1:** A machine's state can only change through the `MachineStateMachine`. Direct assignment of `machine.State` bypassing the FSM is prohibited.
+Every state transition produces an immutable audit record containing the source state, destination state, reason, and timestamp.
 
-**INV-2:** A machine in `Faulted` state cannot transition to `Running`. The only valid exit from Faulted is `Maintenance`.
+## Faults
 
-**INV-3:** A machine in `Faulted` state cannot transition to `Idle`. Unresolved faults cannot be ignored.
+When a fault is injected into a running machine, it automatically forces a transition to the Faulted state. Faults are never silent and must persist until they are explicitly resolved. Fault resolution is only permitted when the machine is in Maintenance.
 
-**INV-4:** A machine in `Running` state cannot transition directly to `Idle`. It must go through `Maintenance` or `Calibrating`.
+Each fault type has a deterministic effect on the system:
+- ThermalOverload increases temperature readings by +0.5�C per simulation tick and is persisted directly in the telemetry.
+- LaserDegradation reduces the throughput factor by 30% and degrades overlay accuracy.
+- SensorFailure injects �2�C noise into telemetry ingestion and drift measurements.
 
-**INV-5:** A machine in `Maintenance` cannot transition directly to `Running`. It must pass through `Calibrating` first (recalibration after repair).
+Once a fault is resolved, the throughput factor is restored to its nominal value.
 
-**INV-6:** Every state transition produces an immutable `StateTransition` audit record with `fromState`, `toState`, `reason`, and `timestamp`.
+## Telemetry
 
----
+Telemetry ingestion is rejected for machines that are under maintenance. Any sensor readings outside the plausible range of [-10�C, 80�C] are rejected as invalid.
 
-## Fault Invariants
+Telemetry output is computed as a function of the machine state and any active faults. This ensures all telemetry is causally explainable. A SensorFailure fault, for instance, injects noise into recorded temperature values, meaning the recorded value may differ from the actual sensor input.
 
-**INV-7:** A fault injected on a `Running` machine automatically transitions that machine to `Faulted`. Faults are never silent.
+## Exposure
 
-**INV-8:** Active faults persist until explicitly resolved. Faults do not auto-clear on state transitions.
+Exposures can only be performed on machines that are actively running.
 
-**INV-9:** Fault resolution is only permitted when the machine is in `Maintenance` state. Attempting to resolve faults in any other state produces an error.
+The overlay error is computed deterministically using the temperature, focus offset, and throughput factor. If an exposure exceeds the overlay specification limit (1.5nm), the system generates a warning alert and marks the exposure as failed with a descriptive reason.
 
-**INV-10:** Each fault type has a documented, deterministic effect on system behavior:
-- `ThermalOverload` → temperature spike (+0.5°C) applied during simulation ticks and persisted directly in `TelemetryService.IngestReadingAsync`
-- `LaserDegradation` → reduced throughput factor (-30%) and degraded overlay accuracy
-- `SensorFailure` → ±2°C noise injected into telemetry ingestion and drift measurements
+## Routing
 
-**INV-11:** After fault resolution, throughput factor is restored to 1.0 (nominal).
+Wafer batches are always routed to the coldest running machine to maximize thermal headroom. If no machines are currently running, the batch is rerouted and a system-level warning alert is generated.
 
----
+## Audit
 
-## Telemetry Invariants
+Every state transition, fault injection, and fault resolution is persisted to maintain a complete history of the machine's lifecycle. Alerts cannot be deleted, only acknowledged, ensuring the alert history remains an append-only log.
 
-**INV-12:** Telemetry ingestion is rejected for machines in `Maintenance` state.
+## Reticles
 
-**INV-13:** Sensor readings outside the plausible range `[-10°C, 80°C]` are rejected as sensor garbage.
+The contamination level of a reticle increases monotonically up to a maximum level. A reticle is only usable if its contamination level is below the replacement threshold (0.85) and its usage count is under the maximum limit (5000).
 
-**INV-14:** Telemetry output is a function of `machine_state + active_faults`. The formula `drift = base_drift(state) + fault_effects(faults)` ensures all telemetry is causally explainable and persisted with active fault modifiers.
+## Thermal Convergence
 
-**INV-15:** A `SensorFailure` fault injects noise into recorded temperature values. The recorded value may differ from the actual sensor input.
+When a machine is idle and has no active thermal faults, it converges monotonically towards the ambient baseline temperature (20.0�C) without overshooting it.
 
----
+## Health Scoring
 
-## Exposure Invariants
-
-**INV-16:** Exposures are only permitted on machines in `Running` state. Attempting an exposure on any other state produces an error.
-
-**INV-17:** Overlay error is computed deterministically from `temperature`, `focus_offset`, and `throughput_factor`. The formula:
-```
-overlay = (thermal_factor + focus_penalty) × fault_penalty + noise
-```
-
-**INV-18:** An exposure that exceeds the overlay spec limit (1.5nm) generates a `Warning` alert and is marked as failed with a descriptive `FailureReason`.
-
----
-
-## Routing Invariants
-
-**INV-19:** Wafer batches are routed to the coldest `Running` machine (maximum thermal headroom). Only machines in `Running` state are eligible.
-
-**INV-20:** If no machines are in `Running` state, the batch is rerouted and a system-level `Warning` alert is generated.
-
----
-
-## Audit Invariants
-
-**INV-21:** Every state transition, fault injection, and fault resolution is persisted. The system maintains a complete history of machine lifecycle events.
-
-**INV-22:** Alerts cannot be deleted — only acknowledged. The alert history is an append-only log.
-
----
-
-## Reticle Invariants
-
-**INV-23:** Reticle contamination level is monotonically increasing and bounded by `[0.0, 1.0]` (`MaxContaminationLevel`). A reticle is usable (`IsUsable == true`) strictly when `ContaminationLevel < ReticleContaminationReplacementThreshold` (0.85) and `UsageCount < MaxUsages` (5000).
-
----
-
-## Thermal Convergence Invariants
-
-**INV-24:** A machine in `Idle` state without active thermal faults converges monotonically towards `AmbientBaselineC` (20.0°C) with a drift rate proportional to `AmbientConvergenceRatePerTick` (0.01) and does not overshoot the baseline.
-
----
-
-## Health Scoring Invariants
-
-**INV-25:** Machine health score has a single canonical definition (`ComputeOverallHealthScore`). The `/health` and `/compare` endpoints report the exact same score for the same machine at the same point in time.
+The machine health score has a single canonical definition. Both the health and comparison endpoints report the exact same score for a machine at any given time.
