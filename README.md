@@ -6,7 +6,7 @@ Industrial digital twin in .NET 7 simulating EUV (Extreme Ultraviolet) lithograp
 
 ## Architecture & System Overview
 
-LithoTwinAPI is built around strict domain modeling with zero infrastructure coupling in the domain layer. The project is organized into dedicated layers:
+LithoTwinAPI is built around domain modeling without infrastructure coupling in the domain layer. The project is organized into dedicated layers:
 
 ```text
 LithoTwinAPI/
@@ -20,11 +20,11 @@ LithoTwinAPI/
 
 ### Machine Lifecycle State Machine
 
-Each EUV scanner operates under a strict Finite State Machine (FSM) enforcing industrial operational sequences:
+Each EUV scanner operates under a Finite State Machine (FSM) enforcing industrial operational sequences:
 
 ```text
          ┌─────────────┐
-         │    Idle     │◄─────────────────┐
+         │    Idle     │�-�─────────────────┐
          └──────┬──────┘                  │
                 │ Calibrate               │
                 ▼                         │
